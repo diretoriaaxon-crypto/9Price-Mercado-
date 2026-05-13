@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price - Gestão áXon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        .logo-box { background: #ff6b00; border-radius: 12px; }
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; color: #1e293b; }
+        .input-axon { width: 100%; padding: 0.85rem; border-radius: 1rem; border: 1px solid #e2e8f0; background: white; margin-bottom: 0.5rem; outline: none; font-size: 0.9rem; }
+        .input-axon:focus { border-color: #ff6b00; }
+        .aba-ativa { border-bottom: 4px solid #ff6b00; color: #ff6b00; font-weight: bold; }
+        .secao-titulo { font-size: 0.65rem; font-weight: 900; color: #ea580c; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+        .btn-toggle { padding: 0.5rem 1rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; background: white; font-size: 0.8rem; flex: 1; transition: all 0.2s; }
+        .btn-toggle.active { background: #001f3f; color: white; border-color: #001f3f; font-weight: bold; }
+        .card-divisao { background: white; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 5px; }
+    </style>
+</head>
+<link rel="manifest" href="manifest.json">
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+</script>
+
+<body class="p-2 md:p-4">
+    <div class="max-w-lg mx-auto bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 mb-10">
+        
+        <div class="p-5 flex items-center space-x-4 border-b border-slate-100">
+            <div class="logo-box w-10 h-10 flex items-center justify-center shadow-lg">
+                <span class="text-white text-xl font-bold italic">9</span>
+            </div>
+            <h1 class="text-xl font-bold text-[#001f3f]">Price</h1>
+        </div>
+
+        <div class="flex border-b border-slate-100">
+            <button id="btn-preci" onclick="mudarAba('preci')" class="flex-1 py-3 aba-ativa text-sm">Precificação</button>
+            <button id="btn-espio" onclick="mudarAba('espio')" class="flex-1 py-3 text-slate-400 text-sm">Espionagem</button>
+        </div>
+
+        <!-- ABA PRECIFICAÇÃO -->
+        <div id="aba-preci" class="p-5 space-y-5">
+            <section>
+                <h2 class="secao-titulo">1. Custos Fixos e Operação</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="v_aluguel" placeholder="Aluguel (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                    <input type="text" id="v_luz" placeholder="Luz/Água (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="v_internet" placeholder="Internet (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                    <input type="text" id="v_sacolas" placeholder="Sacolas/Embal. (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="qtd_func" placeholder="Qtd Func." class="input-axon">
+                    <input type="text" id="sal_func" placeholder="Salário (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                </div>
+                <input type="text" id="v_prolabore" placeholder="Seu Pró-labore (Dono) (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+            </section>
+
+            <section class="bg-slate-50 p-4 rounded-2xl">
+                <h2 class="secao-titulo text-blue-900">2. Produto e Compra</h2>
+                <div class="flex space-x-2 mb-3">
+                    <button id="mode-fardo" onclick="setModo('fardo')" class="btn-toggle active">Fardo/Caixa</button>
+                    <button id="mode-quilo" onclick="setModo('quilo')" class="btn-toggle">Por Quilo</button>
+                </div>
+                <select id="setor_produto" class="input-axon font-semibold text-slate-600">
+                    <option value="0.01">Mercearia (Perda 1%)</option>
+                    <option value="0.05">Frios/Carnes (Perda 5%)</option>
+                    <option value="0.10">Hortifruti (Perda 10%)</option>
+                </select>
+                <input type="text" id="p_nome" placeholder="O que comprou? (Ex: Arroz)" class="input-axon">
+                <input type="text" id="p_lote" placeholder="Valor Total Pago (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="p_qtd_total" placeholder="Qtd Fardos/Sacos" class="input-axon">
+                    <input type="text" id="p_qtd_unid" placeholder="Itens por Fardo/KG" class="input-axon">
+                </div>
+                <input type="text" id="margem_desejada" placeholder="Quanto quer ganhar (%)" class="input-axon border-blue-200">
+            </section>
+
+            <div id="secao-divisao" class="hidden space-y-3 bg-orange-50 p-5 rounded-2xl border border-orange-200">
+                <h2 class="secao-titulo text-orange-700">3. Divisão e Segurança</h2>
+                <div class="card-divisao"><p class="text-[10px] text-slate-500 uppercase font-bold">Reposição (Custo Real):</p><b id="div_estoque" class="text-slate-800 text-lg">R$ 0,00</b></div>
+                <div class="card-divisao"><p class="text-[10px] text-slate-500 uppercase font-bold">Equipe e Contas da Loja:</p><b id="div_op" class="text-slate-800 text-lg">R$ 0,00</b></div>
+                <div class="card-divisao border-green-200 bg-green-50"><p class="text-[10px] text-green-600 uppercase font-bold">Seu Lucro Real:</p><b id="div_lucro" class="text-green-700 text-xl">R$ 0,00</b></div>
+                
+                <div class="p-3 bg-red-100 rounded-xl border border-red-200">
+                    <p class="text-[10px] text-red-600 font-bold uppercase">Preço Mínimo p/ Promoção:</p>
+                    <b id="v_promo" class="text-red-700 text-lg">R$ 0,00</b>
+                    <p class="text-[9px] text-red-500 italic mt-1">*Abaixo disso você tira dinheiro do bolso.</p>
+                </div>
+
+                <button onclick="gerarPDF()" class="w-full mt-2 bg-blue-700 text-white font-black py-4 rounded-xl text-xs uppercase shadow-md active:scale-95 transition-all">⬇️ Baixar Relatório PDF</button>
+            </div>
+
+            <div class="space-y-2 pt-2">
+                <button onclick="calcularReal()" class="w-full bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg uppercase text-sm">Calcular Preço Real</button>
+                <button onclick="zerarPreci()" class="w-full bg-slate-100 text-slate-500 font-bold py-2 rounded-lg uppercase text-[10px]">Zerar Tudo</button>
+            </div>
+        </div>
+
+        <!-- ABA ESPIONAGEM (ADICIONADA) -->
+        <div id="aba-espio" class="hidden p-5 space-y-5">
+            <section class="bg-orange-50 p-5 rounded-[2rem] border border-orange-200">
+                <h2 class="secao-titulo text-orange-700">🕵️ MODO ESPIONAGEM</h2>
+                <p class="text-[10px] text-slate-500 mb-4">Descubra quanto o concorrente pagou no fornecedor:</p>
+                
+                <input type="text" id="v_vizinho" placeholder="Preço no vizinho (R$)" class="input-axon" oninput="mascaraMoeda(this)">
+                
+                <button onclick="calcularEspio()" class="w-full bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg uppercase text-sm mb-4">Revelar Custo Estimado</button>
+                
+                <div id="res-espio" class="hidden p-4 bg-white rounded-2xl border border-orange-200 text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">O fornecedor dele deve ser:</p>
+                    <h4 id="espio-custo" class="text-4xl font-black text-[#001f3f] mt-1">R$ 0,00</h4>
+                    <p class="text-[9px] text-orange-600 italic mt-2">*Baseado em média de mercado de 35% de markup.</p>
+                </div>
+            </section>
+        </div>
+
+        <div id="resultado" class="hidden p-6 bg-[#001f3f] text-white rounded-t-[2.5rem]">
+            <p class="text-orange-400 font-bold text-[10px] uppercase tracking-wider">Preço de Venda Sugerido:</p>
+            <h3 id="v_final" class="text-5xl font-black my-1">R$ 0,00</h3>
+            <div id="v_resumo" class="text-[9px] text-slate-300 leading-tight pt-3 border-t border-slate-700 italic"></div>
+        </div>
+    </div>
+
+    <script>
+        let dadosRelatorio = {};
+
+        function mascaraMoeda(i) {
+            let v = i.value.replace(/\D/g, '');
+            v = (v / 100).toFixed(2) + '';
+            v = v.replace(".", ",");
+            v = v.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,");
+            v = v.replace(/(\d)(\d{3}),/g, "$1.$2,");
+            i.value = "R$ " + v;
+        }
+
+        function parseValor(id) {
+            let el = document.getElementById(id);
+            if (!el) return 0;
+            let v = el.value.replace("R$ ", "").replace(/\./g, "").replace(",", ".");
+            return parseFloat(v) || 0;
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-br', { style: 'currency', currency: 'BRL' });
+        }
+
+        function setModo(modo) {
+            document.getElementById('mode-fardo').className = modo === 'fardo' ? 'btn-toggle active' : 'btn-toggle';
+            document.getElementById('mode-quilo').className = modo === 'quilo' ? 'btn-toggle active' : 'btn-toggle';
+            document.getElementById('p_qtd_unid').placeholder = modo === 'fardo' ? 'Itens por Fardo' : 'KG por Lote';
+        }
+
+        function mudarAba(aba) {
+            // Alterna visibilidade das abas
+            document.getElementById('aba-preci').classList.toggle('hidden', aba !== 'preci');
+            document.getElementById('aba-espio').classList.toggle('hidden', aba !== 'espio');
+            
+            // Alterna estilo dos botões
+            document.getElementById('btn-preci').className = aba === 'preci' ? 'flex-1 py-3 aba-ativa text-sm' : 'flex-1 py-3 text-slate-400 text-sm';
+            document.getElementById('btn-espio').className = aba === 'espio' ? 'flex-1 py-3 aba-ativa text-sm' : 'flex-1 py-3 text-slate-400 text-sm';
+            
+            // Esconde resultado principal ao mudar
+            document.getElementById('resultado').classList.add('hidden');
+        }
+
+        function calcularEspio() {
+            const vVizinho = parseValor('v_vizinho');
+            if(vVizinho === 0) return alert("Digite o preço do vizinho!");
+            
+            // Engenharia reversa: Custo estimado baseado num markup médio de 35%
+            const custoEstimado = vVizinho / 1.35;
+            
+            document.getElementById('res-espio').classList.remove('hidden');
+            document.getElementById('espio-custo').innerText = formatarMoeda(custoEstimado);
+        }
+
+        function calcularReal() {
+            const valorTotalCompra = parseValor('p_lote');
+            const fardos = parseFloat(document.getElementById('p_qtd_total').value) || 0;
+            const unidadesPorFardo = parseFloat(document.getElementById('p_qtd_unid').value) || 0;
+            const margemLucro = (parseFloat(document.getElementById('margem_desejada').value) || 0) / 100;
+            const perda = parseFloat(document.getElementById('setor_produto').value);
+
+            if (valorTotalCompra === 0 || fardos === 0 || unidadesPorFardo === 0) {
+                alert("Preencha os campos da compra!"); return;
+            }
+
+            const totalItens = fardos * unidadesPorFardo;
+            const custoUnid = valorTotalCompra / totalItens;
+            const taxaOp = 0.25; 
+
+            const precoVenda = custoUnid * (1 + perda + taxaOp + margemLucro);
+            const precoMinimo = custoUnid * (1 + perda + taxaOp);
+            const lucroLiquidoUnitario = precoVenda - precoMinimo;
+            const sobraContas = precoMinimo - custoUnid;
+
+            document.getElementById('secao-divisao').classList.remove('hidden');
+            document.getElementById('div_estoque').innerText = formatarMoeda(custoUnid);
+            document.getElementById('div_op').innerText = formatarMoeda(sobraContas);
+            document.getElementById('div_lucro').innerText = formatarMoeda(lucroLiquidoUnitario);
+            document.getElementById('v_promo').innerText = formatarMoeda(precoMinimo);
+
+            document.getElementById('resultado').classList.remove('hidden');
+            document.getElementById('v_final').innerText = formatarMoeda(precoVenda);
+            document.getElementById('v_resumo').innerHTML = `Markup: ${((precoVenda/custoUnid)*100).toFixed(0)}% | Faturamento p/ Lote: ${formatarMoeda(precoVenda * totalItens)}`;
+
+            dadosRelatorio = {
+                nome: document.getElementById('p_nome').value || "Produto",
+                venda: precoVenda, estoque: custoUnid, op: sobraContas, lucro: lucroLiquidoUnitario, min: precoMinimo
+            };
+        }
+
+        function gerarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("RELATÓRIO DE PRECIFICAÇÃO áXon", 20, 20);
+            doc.text(`Produto: ${dadosRelatorio.nome}`, 20, 35);
+            doc.text(`Preço de Venda Sugerido: ${formatarMoeda(dadosRelatorio.venda)}`, 20, 45);
+            doc.text(`Preço Mínimo (Promoção): ${formatarMoeda(dadosRelatorio.min)}`, 20, 55);
+            doc.text(`---------------------------------------`, 20, 65);
+            doc.text(`Divisão por Unidade:`, 20, 75);
+            doc.text(`Reposição (Fornecedor): ${formatarMoeda(dadosRelatorio.estoque)}`, 20, 85);
+            doc.text(`Custos Loja/Equipe: ${formatarMoeda(dadosRelatorio.op)}`, 20, 95);
+            doc.text(`Lucro Líquido: ${formatarMoeda(dadosRelatorio.lucro)}`, 20, 105);
+            doc.save(`Relatorio_${dadosRelatorio.nome}.pdf`);
+        }
+
+        function zerarPreci() {
+            const inputs = document.querySelectorAll('#aba-preci input');
+            inputs.forEach(i => i.value = '');
+            document.getElementById('resultado').classList.add('hidden');
+            document.getElementById('secao-divisao').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

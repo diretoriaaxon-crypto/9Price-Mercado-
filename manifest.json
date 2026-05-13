@@ -1,0 +1,16 @@
+{
+  "name": "Price - Gestão áXon",
+  "short_name": "Price",
+  "description": "Sistema de Precificação e Gestão Inteligente",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#001f3f",
+  "theme_color": "#ff6b00",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1077/1077976.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
