@@ -72,6 +72,7 @@
                     <option value="0.10">Hortifruti (Perda 10%)</option>
                 </select>
                 <input type="text" id="p_nome" placeholder="O que comprou? (Ex: Arroz)" class="input-axon">
+                <input type="text" id="preco_mercado" placeholder="Preço Máximo do Mercado (R$)" class="input-axon border-green-200" oninput="mascaraMoeda(this)">
                 <input type="text" id="p_lote" placeholder="Valor Total Pago (R$)" class="input-axon" oninput="mascaraMoeda(this)">
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="p_qtd_total" placeholder="Qtd Fardos/Sacos" class="input-axon">
@@ -82,6 +83,10 @@
 
             <div id="secao-divisao" class="hidden space-y-3 bg-orange-50 p-5 rounded-2xl border border-orange-200">
                 <h2 class="secao-titulo text-orange-700">3. Divisão e Segurança</h2>
+                
+                <!-- AVISO DE REGRA -->
+                <div id="aviso" class="p-2 mb-3 rounded-lg text-sm bg-blue-100 text-blue-800" style="display:none"></div>
+
                 <div class="card-divisao"><p class="text-[10px] text-slate-500 uppercase font-bold">Reposição (Custo Real):</p><b id="div_estoque" class="text-slate-800 text-lg">R$ 0,00</b></div>
                 <div class="card-divisao"><p class="text-[10px] text-slate-500 uppercase font-bold">Equipe e Contas da Loja:</p><b id="div_op" class="text-slate-800 text-lg">R$ 0,00</b></div>
                 <div class="card-divisao border-green-200 bg-green-50"><p class="text-[10px] text-green-600 uppercase font-bold">Seu Lucro Real:</p><b id="div_lucro" class="text-green-700 text-xl">R$ 0,00</b></div>
@@ -156,15 +161,12 @@
         }
 
         function mudarAba(aba) {
-            // Alterna visibilidade das abas
             document.getElementById('aba-preci').classList.toggle('hidden', aba !== 'preci');
             document.getElementById('aba-espio').classList.toggle('hidden', aba !== 'espio');
             
-            // Alterna estilo dos botões
             document.getElementById('btn-preci').className = aba === 'preci' ? 'flex-1 py-3 aba-ativa text-sm' : 'flex-1 py-3 text-slate-400 text-sm';
             document.getElementById('btn-espio').className = aba === 'espio' ? 'flex-1 py-3 aba-ativa text-sm' : 'flex-1 py-3 text-slate-400 text-sm';
             
-            // Esconde resultado principal ao mudar
             document.getElementById('resultado').classList.add('hidden');
         }
 
@@ -172,70 +174,31 @@
             const vVizinho = parseValor('v_vizinho');
             if(vVizinho === 0) return alert("Digite o preço do vizinho!");
             
-            // Engenharia reversa: Custo estimado baseado num markup médio de 35%
             const custoEstimado = vVizinho / 1.35;
             
             document.getElementById('res-espio').classList.remove('hidden');
             document.getElementById('espio-custo').innerText = formatarMoeda(custoEstimado);
         }
 
+        // ✅ FUNÇÃO DE CÁLCULO CORRIGIDA E ATUALIZADA
         function calcularReal() {
             const valorTotalCompra = parseValor('p_lote');
             const fardos = parseFloat(document.getElementById('p_qtd_total').value) || 0;
             const unidadesPorFardo = parseFloat(document.getElementById('p_qtd_unid').value) || 0;
             const margemLucro = (parseFloat(document.getElementById('margem_desejada').value) || 0) / 100;
             const perda = parseFloat(document.getElementById('setor_produto').value);
+            const precoMaxMercado = parseValor('preco_mercado') || 999999;
+
+            // 🔹 CÁLCULO CORRETO DOS CUSTOS FIXOS (SALÁRIO × QTD FUNCIONÁRIOS)
+            const aluguel = parseValor('v_aluguel');
+            const luz = parseValor('v_luz');
+            const internet = parseValor('v_internet');
+            const sacolas = parseValor('v_sacolas');
+            const qtdFunc = parseFloat(document.getElementById('qtd_func').value) || 0;
+            const salario = parseValor('sal_func');
+            const proLabore = parseValor('v_prolabore');
+            const custoFixoTotal = aluguel + luz + internet + sacolas + (salario * qtdFunc) + proLabore;
 
             if (valorTotalCompra === 0 || fardos === 0 || unidadesPorFardo === 0) {
                 alert("Preencha os campos da compra!"); return;
             }
-
-            const totalItens = fardos * unidadesPorFardo;
-            const custoUnid = valorTotalCompra / totalItens;
-            const taxaOp = 0.25; 
-
-            const precoVenda = custoUnid * (1 + perda + taxaOp + margemLucro);
-            const precoMinimo = custoUnid * (1 + perda + taxaOp);
-            const lucroLiquidoUnitario = precoVenda - precoMinimo;
-            const sobraContas = precoMinimo - custoUnid;
-
-            document.getElementById('secao-divisao').classList.remove('hidden');
-            document.getElementById('div_estoque').innerText = formatarMoeda(custoUnid);
-            document.getElementById('div_op').innerText = formatarMoeda(sobraContas);
-            document.getElementById('div_lucro').innerText = formatarMoeda(lucroLiquidoUnitario);
-            document.getElementById('v_promo').innerText = formatarMoeda(precoMinimo);
-
-            document.getElementById('resultado').classList.remove('hidden');
-            document.getElementById('v_final').innerText = formatarMoeda(precoVenda);
-            document.getElementById('v_resumo').innerHTML = `Markup: ${((precoVenda/custoUnid)*100).toFixed(0)}% | Faturamento p/ Lote: ${formatarMoeda(precoVenda * totalItens)}`;
-
-            dadosRelatorio = {
-                nome: document.getElementById('p_nome').value || "Produto",
-                venda: precoVenda, estoque: custoUnid, op: sobraContas, lucro: lucroLiquidoUnitario, min: precoMinimo
-            };
-        }
-
-        function gerarPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("RELATÓRIO DE PRECIFICAÇÃO áXon", 20, 20);
-            doc.text(`Produto: ${dadosRelatorio.nome}`, 20, 35);
-            doc.text(`Preço de Venda Sugerido: ${formatarMoeda(dadosRelatorio.venda)}`, 20, 45);
-            doc.text(`Preço Mínimo (Promoção): ${formatarMoeda(dadosRelatorio.min)}`, 20, 55);
-            doc.text(`---------------------------------------`, 20, 65);
-            doc.text(`Divisão por Unidade:`, 20, 75);
-            doc.text(`Reposição (Fornecedor): ${formatarMoeda(dadosRelatorio.estoque)}`, 20, 85);
-            doc.text(`Custos Loja/Equipe: ${formatarMoeda(dadosRelatorio.op)}`, 20, 95);
-            doc.text(`Lucro Líquido: ${formatarMoeda(dadosRelatorio.lucro)}`, 20, 105);
-            doc.save(`Relatorio_${dadosRelatorio.nome}.pdf`);
-        }
-
-        function zerarPreci() {
-            const inputs = document.querySelectorAll('#aba-preci input');
-            inputs.forEach(i => i.value = '');
-            document.getElementById('resultado').classList.add('hidden');
-            document.getElementById('secao-divisao').classList.add('hidden');
-        }
-    </script>
-</body>
-</html>
